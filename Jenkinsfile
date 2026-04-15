@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        GIT_REPO = 'https://github.com/Ajayrichard/Jenkinsandjava.git'
+        GIT_REPO = 'https://github.com/akram194/Jenkinsandjava.git'
         AWS_REGION = 'ap-south-1'
         ECR_REPO_NAME = 'jenkinsecr'
         ECR_PUBLIC_REPO_URI = '499193102247.dkr.ecr.ap-south-1.amazonaws.com/jenkinsecr'
