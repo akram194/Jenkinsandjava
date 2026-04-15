@@ -2,17 +2,18 @@ pipeline {
     agent any
 
     environment {
-        GIT_REPO = 'https://github.com/akram194/Jenkinsandjava.git'
-        AWS_REGION = 'ap-south-1b'
-        ECR_REPO_NAME = 'my-ecr-private'
-        ECR_PUBLIC_REPO_URI = '797622874630.dkr.ecr.ap-south-1.amazonaws.com/my-ecr-private'
+        GIT_REPO = 'https://github.com/Ajayrichard/Jenkinsandjava.git'
+        AWS_REGION = 'ap-south-1'
+        ECR_REPO_NAME = 'jenkinsecr'
+        ECR_PUBLIC_REPO_URI = '499193102247.dkr.ecr.ap-south-1.amazonaws.com/jenkinsecr'
         IMAGE_TAG = 'latest'
-        AWS_ACCOUNT_ID = '797622874630'
+        AWS_ACCOUNT_ID = '499193102247'
         IMAGE_URI = "${ECR_PUBLIC_REPO_URI}:${IMAGE_TAG}"
-  
+        EKS_CLUSTER = 'my-eks-cluster2'
     }
 
     stages {
+
         stage('Install AWS CLI') {
             steps {
                 script {
@@ -31,21 +32,20 @@ pipeline {
             }
         }
 
-             stage('Configure AWS Credentials') {
-    steps {
-        script {
-            sh '''
-            echo "Setting up AWS credentials for Jenkins..."
-            mkdir -p /var/lib/jenkins/.aws
-            echo "[default]" > /var/lib/jenkins/.aws/credentials
-            echo "aws_access_key_id=AKIA3TNQHGIDB3EKW64R" >> /var/lib/jenkins/.aws/credentials
-            echo "aws_secret_access_key=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" >> /var/lib/jenkins/.aws/credentials
-            chown -R jenkins:jenkins /var/lib/jenkins/.aws
-            '''
+        stage('Configure AWS Credentials') {
+            steps {
+                script {
+                    sh '''
+                        echo "Setting up AWS credentials for Jenkins..."
+                        mkdir -p /var/lib/jenkins/.aws
+                        echo "[default]" > /var/lib/jenkins/.aws/credentials
+                        echo "aws_access_key_id=AKIAXIOR2H6TWLYDTZG5" >> /var/lib/jenkins/.aws/credentials
+                        echo "aws_secret_access_key=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" >> /var/lib/jenkins/.aws/credentials
+                        chown -R jenkins:jenkins /var/lib/jenkins/.aws
+                    '''
+                }
+            }
         }
-    }
-}
-
 
         stage('Clone Repository') {
             steps {
@@ -69,7 +69,7 @@ pipeline {
                 script {
                     sh '''
                         echo "Logging into AWS ECR..."
-                        aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 797622874630.dkr.ecr.ap-south-1.amazonaws.com
+                        aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 499193102247.dkr.ecr.ap-south-1.amazonaws.com
                     '''
                 }
             }
@@ -97,8 +97,24 @@ pipeline {
             }
         }
 
+        stage('Deploy to EKS') {
+            steps {
+                script {
+                    sh '''
+                        echo "Updating kubeconfig..."
+                        mkdir -p /var/lib/jenkins/.kube
+                        aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER --kubeconfig /var/lib/jenkins/.kube/config
+                        export KUBECONFIG=/var/lib/jenkins/.kube/config
+
+                        echo "Applying Kubernetes manifests..."
+                        kubectl apply -f Jenkinsandjava/deploymentjava.yaml --validate=false
+                        kubectl apply -f Jenkinsandjava/servicelb.yaml --validate=false
+                    '''
+                }
+            }
+        }
     }
-    
+
     post {
         success {
             echo "Docker image pushed to ECR successfully and deployed."
